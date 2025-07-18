@@ -33,7 +33,7 @@ const Footer = () => {
           </div>
 
           {/* Product Links */}
-          <div>
+          <div className="text-right mr-8">
             <h4 className="font-semibold text-background mb-4">Product</h4>
             <ul className="space-y-3">
               <li>
