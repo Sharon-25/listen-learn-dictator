@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Upload, ArrowRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 const CTASection = () => {
   return <section className="py-20 bg-gradient-hero relative overflow-hidden">
       {/* Background decorative elements */}
@@ -36,13 +37,13 @@ const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="xl" variant="cta" className="group text-lg">
-              <Upload className="mr-2 group-hover:scale-110 transition-transform" />
-              Sign Up Free - No Credit Card
-              <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            
-            
+            <Link to="/auth">
+              <Button size="xl" variant="cta" className="group text-lg">
+                <Upload className="mr-2 group-hover:scale-110 transition-transform" />
+                Sign Up Free - No Credit Card
+                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
           </div>
 
           {/* Trust Indicators */}

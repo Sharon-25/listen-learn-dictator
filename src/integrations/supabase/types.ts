@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_files: {
+        Row: {
+          file_name: string
+          file_size: number | null
+          file_type: string
+          id: string
+          storage_url: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          storage_url: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          storage_url?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          bookmarks: string[] | null
+          file_id: string
+          id: string
+          last_played_position: number | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bookmarks?: string[] | null
+          file_id: string
+          id?: string
+          last_played_position?: number | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bookmarks?: string[] | null
+          file_id?: string
+          id?: string
+          last_played_position?: number | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "user_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

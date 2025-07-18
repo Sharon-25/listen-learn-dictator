@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { FileAudio, Play, Upload } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
+import AuthButton from "@/components/AuthButton";
 import heroImage from "@/assets/hero-illustration.jpg";
 const HeroSection = () => {
   return <section className="relative min-h-screen flex items-center justify-center bg-gradient-hero overflow-hidden">
@@ -32,12 +35,13 @@ const HeroSection = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button size="xl" variant="cta" className="group">
-                <Upload className="mr-2 group-hover:scale-110 transition-transform" />
-                Upload Your First File
-              </Button>
-              
-              
+              <Link to="/auth">
+                <Button size="xl" variant="cta" className="group">
+                  <Upload className="mr-2 group-hover:scale-110 transition-transform" />
+                  Upload Your First File
+                </Button>
+              </Link>
+              <AuthButton />
             </div>
 
             {/* Quick stats */}

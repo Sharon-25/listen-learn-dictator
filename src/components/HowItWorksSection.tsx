@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Zap, Headphones, ArrowRight, CheckCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const steps = [
   {
@@ -190,12 +191,14 @@ const HowItWorksSection = () => {
 
           {/* CTA */}
           <div className="text-center mt-8">
-            <Button size="lg" variant="hero">
-              <Upload className="mr-2" />
-              Try It Yourself - Upload Now
-            </Button>
+            <Link to="/auth">
+              <Button size="lg" variant="hero">
+                <Upload className="mr-2" />
+                Try It Yourself - Upload Now
+              </Button>
+            </Link>
             <p className="text-sm text-muted-foreground mt-2">
-              No account required for your first document
+              Sign up to upload your first document
             </p>
           </div>
         </div>
