@@ -1,80 +1,54 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  FileText, 
-  Volume2, 
-  Play, 
-  Highlighter, 
-  PenTool, 
-  BarChart3,
-  Zap,
-  Upload,
-  Settings,
-  Bookmark,
-  Timer,
-  Brain
-} from "lucide-react";
-
-const features = [
-  {
-    icon: Zap,
-    title: "Smart TTS Engine",
-    description: "Realistic AI voices with adjustable speed, pitch, and tone. Choose from multiple voice personalities.",
-    color: "text-accent-mint"
-  },
-  {
-    icon: Upload,
-    title: "Multi-Format Upload",
-    description: "PDF, Word, PowerPoint, Excel, and more. Drag and drop any document and we'll handle the rest.",
-    color: "text-accent-yellow"
-  },
-  {
-    icon: Play,
-    title: "Advanced Playback Controls",
-    description: "Play, pause, seek, rewind, and set custom playback speeds. Resume exactly where you left off.",
-    color: "text-primary"
-  },
-  {
-    icon: Highlighter,
-    title: "Karaoke Mode",
-    description: "Follow along as text highlights in real-time. Never lose track of where you are in the document.",
-    color: "text-accent-mint"
-  },
-  {
-    icon: PenTool,
-    title: "Take Notes While Listening",
-    description: "Built-in note-taking with timestamps. Your notes sync with the audio for easy reference.",
-    color: "text-accent-yellow"
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics & Progress Tracker",
-    description: "Track your listening time, comprehension, and learning progress with detailed insights.",
-    color: "text-primary"
-  },
-  {
-    icon: Bookmark,
-    title: "Smart Bookmarks",
-    description: "Save important sections and create custom playlists of your favorite content.",
-    color: "text-accent-mint"
-  },
-  {
-    icon: Timer,
-    title: "Focus Sessions",
-    description: "Pomodoro-style listening sessions with breaks to maximize retention and prevent fatigue.",
-    color: "text-accent-yellow"
-  },
-  {
-    icon: Brain,
-    title: "Learning Optimization",
-    description: "AI-powered suggestions for optimal listening speeds based on content complexity.",
-    color: "text-primary"
-  }
-];
-
+import { FileText, Volume2, Play, Highlighter, PenTool, BarChart3, Zap, Upload, Settings, Bookmark, Timer, Brain } from "lucide-react";
+const features = [{
+  icon: Zap,
+  title: "Smart TTS Engine",
+  description: "Realistic AI voices with adjustable speed, pitch, and tone. Choose from multiple voice personalities.",
+  color: "text-accent-mint"
+}, {
+  icon: Upload,
+  title: "Multi-Format Upload",
+  description: "PDF, Word, PowerPoint, Excel, and more. Drag and drop any document and we'll handle the rest.",
+  color: "text-accent-yellow"
+}, {
+  icon: Play,
+  title: "Advanced Playback Controls",
+  description: "Play, pause, seek, rewind, and set custom playback speeds. Resume exactly where you left off.",
+  color: "text-primary"
+}, {
+  icon: Highlighter,
+  title: "Karaoke Mode",
+  description: "Follow along as text highlights in real-time. Never lose track of where you are in the document.",
+  color: "text-accent-mint"
+}, {
+  icon: PenTool,
+  title: "Take Notes While Listening",
+  description: "Built-in note-taking with timestamps. Your notes sync with the audio for easy reference.",
+  color: "text-accent-yellow"
+}, {
+  icon: BarChart3,
+  title: "Analytics & Progress Tracker",
+  description: "Track your listening time, comprehension, and learning progress with detailed insights.",
+  color: "text-primary"
+}, {
+  icon: Bookmark,
+  title: "Smart Bookmarks",
+  description: "Save important sections and create custom playlists of your favorite content.",
+  color: "text-accent-mint"
+}, {
+  icon: Timer,
+  title: "Focus Sessions",
+  description: "Pomodoro-style listening sessions with breaks to maximize retention and prevent fatigue.",
+  color: "text-accent-yellow"
+}, {
+  icon: Brain,
+  title: "Learning Optimization",
+  description: "AI-powered suggestions for optimal listening speeds based on content complexity.",
+  color: "text-primary"
+}];
 const FeaturesSection = () => {
-  return (
-    <section className="py-20 bg-background">
+  return <section className="py-20 bg-background">
       <div className="container mx-auto px-6">
         {/* Section Header */}
         <div className="text-center mb-16 animate-slide-in-up">
@@ -93,17 +67,14 @@ const FeaturesSection = () => {
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {features.map((feature, index) => (
-            <Card 
-              key={feature.title}
-              className="group hover:shadow-card transition-all duration-300 hover:scale-[1.02] bg-gradient-card border-0 animate-slide-in-up"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
+          {features.map((feature, index) => <Card key={feature.title} className="group hover:shadow-card transition-all duration-300 hover:scale-[1.02] bg-gradient-card border-0 animate-slide-in-up" style={{
+          animationDelay: `${index * 0.1}s`
+        }}>
               <CardHeader className="text-center pb-4">
                 <div className={`inline-flex p-3 rounded-full bg-background/50 ${feature.color} mb-4 group-hover:scale-110 transition-transform duration-300`}>
                   <feature.icon size={32} />
                 </div>
-                <CardTitle className="text-xl font-semibold group-hover:text-primary transition-colors">
+                <CardTitle className="text-xl font-semibold group-hover:text-primary transition-colors mx-[100px]">
                   {feature.title}
                 </CardTitle>
               </CardHeader>
@@ -112,8 +83,7 @@ const FeaturesSection = () => {
                   {feature.description}
                 </p>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
 
         {/* Feature Highlight */}
@@ -166,8 +136,6 @@ const FeaturesSection = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default FeaturesSection;
