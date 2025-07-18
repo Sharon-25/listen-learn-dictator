@@ -1,10 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Github, Twitter, Linkedin, Mail, FileAudio } from "lucide-react";
-
 const Footer = () => {
-  return (
-    <footer className="bg-foreground text-background py-16">
+  return <footer className="bg-foreground text-background py-16">
       <div className="container mx-auto px-6">
         {/* Main Footer Content */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
@@ -21,9 +19,7 @@ const Footer = () => {
               Perfect for students, professionals, and lifelong learners.
             </p>
             <div className="flex gap-4">
-              <Button variant="ghost" size="sm" className="text-background/80 hover:text-background hover:bg-background/10">
-                <Twitter size={20} />
-              </Button>
+              
               <Button variant="ghost" size="sm" className="text-background/80 hover:text-background hover:bg-background/10">
                 <Linkedin size={20} />
               </Button>
@@ -73,19 +69,11 @@ const Footer = () => {
             <h4 className="font-semibold text-background mb-4">Company</h4>
             <ul className="space-y-3">
               <li>
-                <a href="#about" className="text-background/80 hover:text-background transition-colors">
-                  About Us
-                </a>
+                
               </li>
+              
               <li>
-                <a href="#blog" className="text-background/80 hover:text-background transition-colors">
-                  Blog
-                </a>
-              </li>
-              <li>
-                <a href="#careers" className="text-background/80 hover:text-background transition-colors">
-                  Careers
-                </a>
+                
               </li>
               <li>
                 <a href="#contact" className="text-background/80 hover:text-background transition-colors">
@@ -93,9 +81,7 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="#press" className="text-background/80 hover:text-background transition-colors">
-                  Press Kit
-                </a>
+                
               </li>
             </ul>
           </div>
@@ -123,19 +109,10 @@ const Footer = () => {
           <div className="flex items-center gap-4 text-sm text-background/80">
             <span>© 2024 Dictator. All rights reserved.</span>
             <span>•</span>
-            <a 
-              href="https://lovable.dev" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="hover:text-background transition-colors flex items-center gap-1"
-            >
-              Built with ❤️ using Lovable
-            </a>
+            
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;

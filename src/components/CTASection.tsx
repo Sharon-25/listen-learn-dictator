@@ -1,9 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Upload, ArrowRight, Sparkles } from "lucide-react";
-
 const CTASection = () => {
-  return (
-    <section className="py-20 bg-gradient-hero relative overflow-hidden">
+  return <section className="py-20 bg-gradient-hero relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-10 left-1/4 w-24 h-24 bg-accent-mint/20 rounded-full animate-float"></div>
@@ -38,23 +36,13 @@ const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button 
-              size="xl" 
-              variant="cta"
-              className="group text-lg"
-            >
+            <Button size="xl" variant="cta" className="group text-lg">
               <Upload className="mr-2 group-hover:scale-110 transition-transform" />
               Sign Up Free - No Credit Card
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
             
-            <Button 
-              size="xl" 
-              variant="outline"
-              className="text-white border-white/30 hover:bg-white/10 hover:border-white text-lg"
-            >
-              Watch 2-Min Demo
-            </Button>
+            
           </div>
 
           {/* Trust Indicators */}
@@ -85,8 +73,6 @@ const CTASection = () => {
           <path d="M0,64L48,69.3C96,75,192,85,288,90.7C384,96,480,96,576,90.7C672,85,768,75,864,69.3C960,64,1056,64,1152,69.3C1248,75,1344,85,1392,90.7L1440,96L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"></path>
         </svg>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default CTASection;
