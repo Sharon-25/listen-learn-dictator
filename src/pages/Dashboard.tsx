@@ -167,7 +167,8 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      window.location.href = '/';
+      // Force redirect to auth page
+      window.location.href = '/auth';
     } catch (error) {
       toast({
         title: "Error",
@@ -214,9 +215,9 @@ const Dashboard = () => {
 
         <div className="grid gap-6">
           {/* Upload Section */}
-          <Card>
+          <Card className="bg-gradient-to-br from-card to-card/80 border-border/50 shadow-lg">
             <CardHeader>
-              <CardTitle>Upload Document</CardTitle>
+              <CardTitle className="text-xl">Upload Document</CardTitle>
               <CardDescription>
                 Upload PDF, DOCX, PPTX, XLSX, or TXT files to convert to audio
               </CardDescription>
@@ -235,6 +236,7 @@ const Dashboard = () => {
                   onClick={() => fileInputRef.current?.click()} 
                   disabled={uploading}
                   variant="cta"
+                  className="min-w-[140px]"
                 >
                   {uploading ? (
                     <>
@@ -253,53 +255,78 @@ const Dashboard = () => {
           </Card>
 
           {/* File Library */}
-          <Card>
+          <Card className="bg-gradient-to-br from-card to-card/80 border-border/50 shadow-lg">
             <CardHeader>
-              <CardTitle>Your Files</CardTitle>
+              <CardTitle className="text-xl">Your Audio Library</CardTitle>
               <CardDescription>
-                {files.length} file{files.length !== 1 ? 's' : ''} uploaded
+                {files.length} document{files.length !== 1 ? 's' : ''} ready for listening
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : files.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                  <p>No files uploaded yet</p>
-                  <p className="text-sm">Upload your first document to get started</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="mx-auto h-16 w-16 mb-4 opacity-40" />
+                  <h3 className="text-lg font-medium mb-2">No documents yet</h3>
+                  <p className="text-sm">Upload your first document to start listening</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {files.map((file) => (
-                    <div
+                    <Card
                       key={file.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                      className="group hover:shadow-lg transition-all duration-300 border-border/50 bg-gradient-to-br from-accent/20 to-accent/10"
                     >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-8 w-8 text-primary" />
-                        <div>
-                          <h3 className="font-medium">{file.file_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {formatFileSize(file.file_size)} • {new Date(file.uploaded_at).toLocaleDateString()}
-                          </p>
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-3 mb-4">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <FileText className="h-6 w-6 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm truncate mb-1">{file.file_name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(file.file_size)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(file.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <Play className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleDeleteFile(file.id, file.storage_url)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                        
+                        {/* Progress bar placeholder */}
+                        <div className="mb-4">
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>Progress</span>
+                            <span>0%</span>
+                          </div>
+                          <div className="w-full bg-accent/30 rounded-full h-1.5">
+                            <div className="bg-accent-mint h-1.5 rounded-full" style={{ width: '0%' }}></div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="cta" 
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => window.location.href = `/read/${file.id}`}
+                          >
+                            <Play className="mr-2 h-4 w-4" />
+                            Listen
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteFile(file.id, file.storage_url)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}

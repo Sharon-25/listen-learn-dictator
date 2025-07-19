@@ -14,6 +14,123 @@ export type Database = {
   }
   public: {
     Tables: {
+      documents: {
+        Row: {
+          content: string | null
+          created_at: string
+          filename: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          filename: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          filename?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      listening_sessions: {
+        Row: {
+          document_id: string
+          id: string
+          last_position: number | null
+          timestamp: string
+          total_time: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          last_position?: number | null
+          timestamp?: string
+          total_time?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          last_position?: number | null
+          timestamp?: string
+          total_time?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notes: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          note: string
+          timestamp: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          note: string
+          timestamp?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          note?: string
+          timestamp?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          pomodoro_enabled: boolean | null
+          speed: number | null
+          updated_at: string
+          user_id: string
+          voice_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pomodoro_enabled?: boolean | null
+          speed?: number | null
+          updated_at?: string
+          user_id: string
+          voice_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pomodoro_enabled?: boolean | null
+          speed?: number | null
+          updated_at?: string
+          user_id?: string
+          voice_type?: string | null
+        }
+        Relationships: []
+      }
       user_files: {
         Row: {
           file_name: string

@@ -182,17 +182,25 @@ const TextToSpeechDemo = () => {
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-accent-mint rounded-full animate-pulse"></div>
               Playing... ({currentWordIndex + 1} of {words.length} words)
+              <span className="ml-4 font-mono">
+                {Math.floor((currentWordIndex + 1) / 3)}:{String(((currentWordIndex + 1) % 3) * 20).padStart(2, '0')} / 
+                {Math.floor(words.length / 3)}:{String((words.length % 3) * 20).padStart(2, '0')}
+              </span>
             </div>
           )}
           {isPaused && (
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-accent-yellow rounded-full"></div>
               Paused at word {currentWordIndex + 1}
+              <span className="ml-4 font-mono">
+                {Math.floor((currentWordIndex + 1) / 3)}:{String(((currentWordIndex + 1) % 3) * 20).padStart(2, '0')} / 
+                {Math.floor(words.length / 3)}:{String((words.length % 3) * 20).padStart(2, '0')}
+              </span>
             </div>
           )}
           {!isPlaying && !isPaused && (
             <div className="text-muted-foreground">
-              Click Play to start the demo
+              Click Play to start the demo • Duration: ~{Math.floor(words.length / 3)}:{String((words.length % 3) * 20).padStart(2, '0')}
             </div>
           )}
         </div>
