@@ -5,7 +5,7 @@ const Footer = () => {
   return <footer className="bg-foreground text-background py-16">
       <div className="container mx-auto px-6">
         {/* Main Footer Content */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12 mx-0 my-0">
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-4">
@@ -33,7 +33,7 @@ const Footer = () => {
           </div>
 
           {/* Product Links */}
-          <div>
+          <div className="my-0 mx-[90px] px-[30px]">
             <h4 className="font-semibold text-background mb-4">Product</h4>
             <ul className="space-y-3">
               <li>
@@ -52,21 +52,17 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="#api" className="text-background/80 hover:text-background transition-colors">
-                  API
-                </a>
+                
               </li>
               <li>
-                <a href="#integrations" className="text-background/80 hover:text-background transition-colors">
-                  Integrations
-                </a>
+                
               </li>
             </ul>
           </div>
 
           {/* Company Links */}
           <div>
-            <h4 className="font-semibold text-background mb-4">Company</h4>
+            
             <ul className="space-y-3">
               <li>
                 
@@ -75,11 +71,7 @@ const Footer = () => {
               <li>
                 
               </li>
-              <li>
-                <a href="#contact" className="text-background/80 hover:text-background transition-colors">
-                  Contact
-                </a>
-              </li>
+              
               <li>
                 
               </li>
