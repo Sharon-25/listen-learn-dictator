@@ -111,17 +111,50 @@ const ReadingPage = () => {
 
   const fetchDocument = async () => {
     try {
-      const { data, error } = await supabase
-        .from('documents')
+      // First get the file metadata from user_files
+      const { data: fileData, error: fileError } = await supabase
+        .from('user_files')
         .select('*')
         .eq('id', fileId)
         .single();
 
-      if (error) throw error;
+      if (fileError) throw fileError;
       
-      if (data) {
-        setDocument(data);
-        const content = data.content || "Sample document content for demonstration. This is a placeholder text that shows how the reading functionality works with word-by-word highlighting and smooth scrolling.";
+      if (fileData) {
+        // Check if we have processed content in documents table
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('user_id', user!.id)
+          .eq('filename', fileData.file_name)
+          .maybeSingle();
+
+        let content = "";
+        
+        if (docData && docData.content) {
+          // Use processed content if available
+          content = docData.content;
+        } else {
+          // Use placeholder content for now (in a real app, you'd extract text from the file)
+          content = `This is the content of ${fileData.file_name}. 
+
+This is a demonstration of the text-to-speech functionality. The system will highlight each word as it speaks, showing you exactly where you are in the document.
+
+You can pause and resume at any time, and the system will remember where you left off. The interface shows only 10 lines at a time to help you focus and reduce visual overwhelm.
+
+This content would normally be extracted from your uploaded PDF, DOCX, PPTX, or other document formats. The text-to-speech engine will read through this content at your preferred speed.
+
+You can take notes at any timestamp, adjust the reading speed, and even enable Pomodoro mode for focused study sessions. The AI will suggest optimal reading speeds based on content complexity.
+
+Each word is precisely synchronized with the audio, creating a seamless reading experience that helps with comprehension and retention.`;
+        }
+
+        setDocument({
+          id: fileData.id,
+          filename: fileData.file_name,
+          content: content
+        });
+
         const words = content.split(/\s+/);
         const lines = content.split('\n').filter(line => line.trim());
         
@@ -129,11 +162,13 @@ const ReadingPage = () => {
         linesRef.current = lines;
       }
     } catch (error) {
+      console.error('Error loading document:', error);
       toast({
-        title: "Error",
-        description: "Failed to load document",
+        title: "Error", 
+        description: "Could not load document. Please try again.",
         variant: "destructive",
       });
+      navigate('/dashboard');
     }
   };
 
