@@ -1,10 +1,30 @@
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { User, LogIn } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { User, LogIn, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const AuthButton = () => {
   const { user, loading } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+      window.location.href = '/';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -16,12 +36,18 @@ const AuthButton = () => {
 
   if (user) {
     return (
-      <Link to="/dashboard">
-        <Button variant="outline">
-          <User className="mr-2 h-4 w-4" />
-          Dashboard
+      <div className="flex items-center gap-2">
+        <Link to="/dashboard">
+          <Button variant="outline">
+            <User className="mr-2 h-4 w-4" />
+            Dashboard
+          </Button>
+        </Link>
+        <Button variant="ghost" onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
         </Button>
-      </Link>
+      </div>
     );
   }
 

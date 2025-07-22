@@ -6,8 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Navigate, Link } from 'react-router-dom';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -70,7 +70,8 @@ const Auth = () => {
           title: "Welcome back!",
           description: "Successfully signed in.",
         });
-        window.location.href = '/dashboard';
+        // Use navigate instead of window.location for better UX
+        setTimeout(() => window.location.href = '/dashboard', 1000);
       }
     } catch (error) {
       toast({
@@ -85,7 +86,15 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-6">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-4">
+        <Link to="/">
+          <Button variant="ghost" className="text-white hover:bg-white/10">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+        </Link>
+        
+        <Card className="w-full">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Welcome to Dictator</CardTitle>
           <CardDescription>
@@ -159,7 +168,8 @@ const Auth = () => {
             </TabsContent>
           </Tabs>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

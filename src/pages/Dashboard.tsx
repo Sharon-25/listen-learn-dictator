@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Play, Pause, LogOut, Trash2 } from 'lucide-react';
+import { Upload, FileText, Play, Pause, LogOut, Trash2, ArrowLeft, Home } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
 interface UserFile {
@@ -202,10 +202,18 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {user?.email}</p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="outline">
+                <Home className="mr-2 h-4 w-4" />
+                Home
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-muted-foreground">Welcome back, {user?.email}</p>
+            </div>
           </div>
           <Button onClick={handleSignOut} variant="outline">
             <LogOut className="mr-2 h-4 w-4" />
