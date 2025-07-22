@@ -265,7 +265,46 @@ Each word is precisely synchronized with the audio, creating a seamless reading 
     }
   };
 
-  const handlePlay = () => {
+  const generateAudio = async (text: string) => {
+    try {
+      const { data: audioResult, error: audioError } = await supabase.functions
+        .invoke('text-to-speech', {
+          body: {
+            text: text,
+            voice_id: getVoiceId(settings.voice_type),
+            speed: settings.speed
+          }
+        });
+
+      if (audioError) {
+        console.error('Audio generation error:', audioError);
+        throw new Error('Failed to generate audio');
+      }
+
+      if (audioResult?.audioContent) {
+        return audioResult.audioContent;
+      } else {
+        throw new Error('No audio content received');
+      }
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      throw error;
+    }
+  };
+
+  const getVoiceId = (voiceType: string) => {
+    const voiceMap: { [key: string]: string } = {
+      'aria': '9BWtsMINqrJLrRacOk9x',
+      'roger': 'CwhRBWXzGAHq8TQ4Fs17',
+      'sarah': 'EXAVITQu4vr4xnSDxMaL',
+      'laura': 'FGY2WhTYpPnrIDTdsKH5',
+      'charlie': 'IKne3meq5aSn9XLyUdCD',
+      'default': '9BWtsMINqrJLrRacOk9x' // Aria as default
+    };
+    return voiceMap[voiceType] || voiceMap['default'];
+  };
+
+  const handlePlay = async () => {
     if (!document) return;
 
     const content = document.content || wordsRef.current.join(' ');
@@ -278,8 +317,109 @@ Each word is precisely synchronized with the audio, creating a seamless reading 
       return;
     }
 
-    speechSynthesis.cancel();
-    
+    try {
+      setIsPlaying(true);
+      speechSynthesis.cancel();
+
+      toast({
+        title: "Generating audio...",
+        description: "Creating high-quality voice narration with ElevenLabs.",
+      });
+
+      // Generate audio with ElevenLabs
+      const audioContent = await generateAudio(content);
+      
+      // Convert base64 to blob and create audio element
+      const binaryString = atob(audioContent);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      
+      // Calculate approximate timing for word highlighting
+      const totalDuration = await new Promise<number>((resolve) => {
+        audio.addEventListener('loadedmetadata', () => {
+          resolve(audio.duration);
+        });
+        audio.load();
+      });
+
+      const wordsPerSecond = words.length / totalDuration;
+      let wordIndex = currentWordIndex;
+      
+      // Start word highlighting timer
+      const highlightInterval = setInterval(() => {
+        if (wordIndex < words.length && !audio.paused) {
+          setCurrentWordIndex(wordIndex);
+          setProgress((wordIndex / words.length) * 100);
+          updateSession(wordIndex);
+          
+          // Update visible lines
+          const wordsPerLine = Math.ceil(words.length / linesRef.current.length);
+          const currentLine = Math.floor(wordIndex / wordsPerLine);
+          
+          if (currentLine >= visibleLineStart + LINES_PER_VIEW) {
+            setVisibleLineStart(currentLine - LINES_PER_VIEW + 1);
+          }
+          
+          wordIndex++;
+        } else {
+          clearInterval(highlightInterval);
+        }
+      }, 1000 / wordsPerSecond);
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+        clearInterval(highlightInterval);
+        if (wordIndex >= words.length - 1) {
+          setCurrentWordIndex(0);
+          setProgress(0);
+          updateSession(0);
+        }
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onpause = () => {
+        setIsPaused(true);
+        setIsPlaying(false);
+        clearInterval(highlightInterval);
+      };
+
+      audio.onplay = () => {
+        setIsPaused(false);
+        setIsPlaying(true);
+      };
+
+      speechRef.current = audio as any;
+      await audio.play();
+
+      toast({
+        title: "Audio ready!",
+        description: "High-quality voice narration is now playing.",
+      });
+
+    } catch (error) {
+      console.error('Error in handlePlay:', error);
+      setIsPlaying(false);
+      setIsPaused(false);
+      
+      toast({
+        title: "Audio Error",
+        description: "Failed to generate audio. Falling back to browser voice.",
+        variant: "destructive",
+      });
+
+      // Fallback to browser speech synthesis
+      fallbackToSpeechSynthesis(content, words);
+    }
+  };
+
+  const fallbackToSpeechSynthesis = (content: string, words: string[]) => {
     const utterance = new SpeechSynthesisUtterance(content);
     utterance.rate = settings.speed;
     utterance.pitch = 1;
@@ -299,7 +439,6 @@ Each word is precisely synchronized with the audio, creating a seamless reading 
         setProgress((wordIndex / words.length) * 100);
         updateSession(wordIndex);
         
-        // Update visible lines
         const wordsPerLine = Math.ceil(words.length / linesRef.current.length);
         const currentLine = Math.floor(wordIndex / wordsPerLine);
         
@@ -324,15 +463,30 @@ Each word is precisely synchronized with the audio, creating a seamless reading 
   };
 
   const handlePause = () => {
-    if (isPlaying) {
-      speechSynthesis.pause();
+    if (speechRef.current && isPlaying) {
+      if (speechRef.current instanceof Audio) {
+        // ElevenLabs audio
+        speechRef.current.pause();
+      } else {
+        // Browser speech synthesis
+        speechSynthesis.pause();
+      }
       setIsPaused(true);
       setIsPlaying(false);
     }
   };
 
   const handleStop = () => {
-    speechSynthesis.cancel();
+    if (speechRef.current) {
+      if (speechRef.current instanceof Audio) {
+        // ElevenLabs audio
+        speechRef.current.pause();
+        speechRef.current.currentTime = 0;
+      } else {
+        // Browser speech synthesis
+        speechSynthesis.cancel();
+      }
+    }
     setIsPlaying(false);
     setIsPaused(false);
     updateSession(currentWordIndex);
@@ -581,9 +735,11 @@ Each word is precisely synchronized with the audio, creating a seamless reading 
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Default Voice</SelectItem>
-                        <SelectItem value="male">Male Voice</SelectItem>
-                        <SelectItem value="female">Female Voice</SelectItem>
+                        <SelectItem value="aria">Aria (Female, Clear)</SelectItem>
+                        <SelectItem value="roger">Roger (Male, Professional)</SelectItem>
+                        <SelectItem value="sarah">Sarah (Female, Warm)</SelectItem>
+                        <SelectItem value="laura">Laura (Female, Energetic)</SelectItem>
+                        <SelectItem value="charlie">Charlie (Male, Friendly)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

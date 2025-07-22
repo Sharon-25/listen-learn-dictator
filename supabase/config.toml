@@ -1,1 +1,7 @@
 project_id = "bvbfvcsucpiyqqcyyiqn"
+
+[functions.text-to-speech]
+verify_jwt = true
+
+[functions.extract-document-text]
+verify_jwt = true

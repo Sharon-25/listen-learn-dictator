@@ -94,7 +94,7 @@ const Dashboard = () => {
         .getPublicUrl(filePath);
 
       // Save file metadata to database
-      const { error: dbError } = await supabase
+      const { data: fileData, error: dbError } = await supabase
         .from('user_files')
         .insert({
           user_id: user.id,
@@ -102,18 +102,63 @@ const Dashboard = () => {
           file_type: file.type,
           storage_url: publicUrl,
           file_size: file.size,
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
 
+      // Extract text content using Hugging Face
+      toast({
+        title: "Processing document...",
+        description: "Extracting text content for audio conversion.",
+      });
+
+      try {
+        const { data: extractionResult, error: extractionError } = await supabase.functions
+          .invoke('extract-document-text', {
+            body: {
+              file_url: publicUrl,
+              file_type: file.type,
+              file_name: file.name
+            }
+          });
+
+        if (extractionError) {
+          console.error('Text extraction error:', extractionError);
+          throw new Error('Failed to extract text from document');
+        }
+
+        if (extractionResult?.success && extractionResult?.extractedText) {
+          // Save extracted content to documents table
+          const { error: docError } = await supabase
+            .from('documents')
+            .insert({
+              user_id: user.id,
+              filename: file.name,
+              content: extractionResult.extractedText
+            });
+
+          if (docError) {
+            console.error('Error saving document content:', docError);
+          } else {
+            console.log('Document content saved successfully');
+          }
+        }
+      } catch (extractionError) {
+        console.error('Text extraction failed:', extractionError);
+        // Continue without extracted text - will use demo content in reading page
+      }
+
       toast({
         title: "Success!",
-        description: "File uploaded successfully.",
+        description: "Document uploaded and processed successfully.",
       });
 
       // Refresh file list
       fetchFiles();
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : 'Upload failed',
