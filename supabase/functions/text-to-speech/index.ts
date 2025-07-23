@@ -15,6 +15,13 @@ serve(async (req) => {
   try {
     const { text, voice_id = "9BWtsMINqrJLrRacOk9x", model = "eleven_multilingual_v2", speed = 1.0 } = await req.json();
 
+    console.log('Request received:', { 
+      textLength: text?.length, 
+      voice_id, 
+      model, 
+      speed 
+    });
+
     if (!text) {
       throw new Error('Text is required');
     }

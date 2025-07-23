@@ -135,18 +135,58 @@ const ReadingPage = () => {
           // Use processed content if available
           content = docData.content;
         } else {
-          // Use placeholder content for now (in a real app, you'd extract text from the file)
-          content = `This is the content of ${fileData.file_name}. 
+          // Extract text from the uploaded file
+          try {
+            console.log('Extracting text from file:', fileData.file_name);
+            const { data: extractResult, error: extractError } = await supabase.functions
+              .invoke('extract-document-text', {
+                body: {
+                  file_url: fileData.storage_url,
+                  file_type: fileData.file_type,
+                  file_name: fileData.file_name
+                }
+              });
 
-This is a demonstration of the text-to-speech functionality. The system will highlight each word as it speaks, showing you exactly where you are in the document.
+            if (extractError) {
+              console.error('Text extraction error:', extractError);
+              throw new Error('Failed to extract text from document');
+            }
 
-You can pause and resume at any time, and the system will remember where you left off. The interface shows only 10 lines at a time to help you focus and reduce visual overwhelm.
+            if (extractResult?.extractedText) {
+              content = extractResult.extractedText;
+              
+              // Save the extracted content to documents table for future use
+              await supabase
+                .from('documents')
+                .insert({
+                  user_id: user!.id,
+                  filename: fileData.file_name,
+                  content: content
+                });
+              
+              console.log('Successfully extracted and saved text:', content.length + ' characters');
+            } else {
+              throw new Error('No text content extracted');
+            }
+          } catch (error) {
+            console.error('Error extracting document text:', error);
+            toast({
+              title: "Extraction Error",
+              description: "Could not extract text from document. Using placeholder content.",
+              variant: "destructive",
+            });
+            
+            // Fallback to placeholder content
+            content = `Unable to extract text from ${fileData.file_name}. 
 
-This content would normally be extracted from your uploaded PDF, DOCX, PPTX, or other document formats. The text-to-speech engine will read through this content at your preferred speed.
+This could be due to:
+- Unsupported file format
+- Encrypted or password-protected document
+- Corrupted file
+- Network connectivity issues
 
-You can take notes at any timestamp, adjust the reading speed, and even enable Pomodoro mode for focused study sessions. The AI will suggest optimal reading speeds based on content complexity.
-
-Each word is precisely synchronized with the audio, creating a seamless reading experience that helps with comprehension and retention.`;
+Please try uploading a different document or check if the file is accessible.`;
+          }
         }
 
         setDocument({
@@ -405,12 +445,20 @@ Each word is precisely synchronized with the audio, creating a seamless reading 
 
     } catch (error) {
       console.error('Error in handlePlay:', error);
+      console.error('Full error details:', {
+        message: error.message,
+        stack: error.stack,
+        voiceType: settings.voice_type,
+        voiceId: getVoiceId(settings.voice_type),
+        speed: settings.speed
+      });
+      
       setIsPlaying(false);
       setIsPaused(false);
       
       toast({
-        title: "Audio Error",
-        description: "Failed to generate audio. Falling back to browser voice.",
+        title: "Audio Error", 
+        description: `Failed to generate audio with ElevenLabs: ${error.message}. Falling back to browser voice.`,
         variant: "destructive",
       });
 
