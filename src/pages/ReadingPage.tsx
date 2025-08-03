@@ -339,9 +339,10 @@ Please try uploading a different document or check if the file is accessible.`;
       'sarah': 'EXAVITQu4vr4xnSDxMaL',
       'laura': 'FGY2WhTYpPnrIDTdsKH5',
       'charlie': 'IKne3meq5aSn9XLyUdCD',
+      'george': 'JBFqnCBsd6RMkjVDRZzb',
       'default': '9BWtsMINqrJLrRacOk9x' // Aria as default
     };
-    return voiceMap[voiceType] || voiceMap['default'];
+    return voiceMap[voiceType.toLowerCase()] || voiceMap['default'];
   };
 
   const handlePlay = async () => {
