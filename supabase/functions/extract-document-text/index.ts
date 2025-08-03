@@ -31,40 +31,62 @@ serve(async (req) => {
 
     let extractedText = '';
 
-    // Download the file
-    const fileResponse = await fetch(file_url);
+    // Download the file with proper headers for Supabase storage
+    const fileResponse = await fetch(file_url, {
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
     if (!fileResponse.ok) {
+      console.error('File download failed:', fileResponse.status, fileResponse.statusText);
       throw new Error(`Failed to download file: ${fileResponse.statusText}`);
     }
 
     if (file_type === 'application/pdf') {
-      // Use Document AI model for PDF text extraction
-      const fileBlob = await fileResponse.blob();
-      
-      const response = await fetch(
-        'https://api-inference.huggingface.co/models/microsoft/layoutlmv3-base',
-        {
-          headers: {
-            'Authorization': `Bearer ${HUGGING_FACE_TOKEN}`,
-            'Content-Type': 'application/octet-stream',
-          },
-          method: 'POST',
-          body: fileBlob,
-        }
-      );
+      try {
+        // Use proper PDF extraction model
+        const fileBuffer = await fileResponse.arrayBuffer();
+        
+        const response = await fetch(
+          'https://api-inference.huggingface.co/models/nielsr/layoutlmv3-finetuned-funsd',
+          {
+            headers: {
+              'Authorization': `Bearer ${HUGGING_FACE_TOKEN}`,
+              'Content-Type': 'application/octet-stream',
+            },
+            method: 'POST',
+            body: fileBuffer,
+          }
+        );
 
-      if (response.ok) {
-        const result = await response.json();
-        extractedText = result.text || result.generated_text || extractFileTextFallback(file_name, file_type);
-      } else {
-        console.log('PDF extraction failed, using fallback');
+        if (response.ok) {
+          const result = await response.json();
+          extractedText = result.text || result.generated_text || '';
+        }
+        
+        if (!extractedText.trim()) {
+          console.log('PDF extraction failed or empty, using fallback');
+          extractedText = extractFileTextFallback(file_name, file_type);
+        }
+      } catch (error) {
+        console.error('PDF processing error:', error);
         extractedText = extractFileTextFallback(file_name, file_type);
       }
     } else if (file_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      // DOCX parsing - in a real implementation, you'd use a proper DOCX parser
-      // For now, extract basic text patterns from the XML structure
-      const text = await fileResponse.text();
-      extractedText = extractTextFromDocx(text) || extractFileTextFallback(file_name, file_type);
+      try {
+        // For DOCX files, try to extract from the ZIP structure
+        const fileBuffer = await fileResponse.arrayBuffer();
+        const text = new TextDecoder().decode(fileBuffer);
+        extractedText = extractTextFromDocx(text);
+        
+        if (!extractedText.trim()) {
+          console.log('DOCX extraction failed or empty, using fallback');
+          extractedText = extractFileTextFallback(file_name, file_type);
+        }
+      } catch (error) {
+        console.error('DOCX processing error:', error);
+        extractedText = extractFileTextFallback(file_name, file_type);
+      }
     } else if (file_type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
       // PPTX parsing - similar approach for presentations
       const text = await fileResponse.text();

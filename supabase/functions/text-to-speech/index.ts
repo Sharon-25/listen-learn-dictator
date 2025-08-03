@@ -14,6 +14,9 @@ serve(async (req) => {
 
   try {
     const { text, voice_id = "9BWtsMINqrJLrRacOk9x", model = "eleven_multilingual_v2", speed = 1.0 } = await req.json();
+    
+    // Clamp speed to ElevenLabs acceptable range (0.7 - 1.2)
+    const clampedSpeed = Math.max(0.7, Math.min(1.2, speed));
 
     console.log('Request received:', { 
       textLength: text?.length, 
@@ -50,7 +53,7 @@ serve(async (req) => {
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.5,
-          speed: speed,
+          speed: clampedSpeed,
           use_speaker_boost: true
         }
       }),
