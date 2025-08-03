@@ -578,6 +578,22 @@ Please try uploading a different document or check if the file is accessible.`;
     const updatedSettings = { ...settings, ...newSettings };
     setSettings(updatedSettings);
 
+    // Show toast for voice changes
+    if (newSettings.voice_type && newSettings.voice_type !== settings.voice_type) {
+      const voiceNames = {
+        'aria': 'Aria (Female, Clear)',
+        'roger': 'Roger (Male, Professional)',
+        'sarah': 'Sarah (Female, Warm)',
+        'laura': 'Laura (Female, Energetic)',
+        'charlie': 'Charlie (Male, Friendly)'
+      };
+      
+      toast({
+        title: "Voice Changed",
+        description: `Now using ${voiceNames[newSettings.voice_type] || newSettings.voice_type}`,
+      });
+    }
+
     try {
       await supabase
         .from('settings')
