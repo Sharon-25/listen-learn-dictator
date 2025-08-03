@@ -152,7 +152,7 @@ const ReadingPage = () => {
               throw new Error('Failed to extract text from document');
             }
 
-            if (extractResult?.extractedText) {
+            if (extractResult?.success && extractResult?.extractedText) {
               content = extractResult.extractedText;
               
               // Save the extracted content to documents table for future use
@@ -165,8 +165,13 @@ const ReadingPage = () => {
                 });
               
               console.log('Successfully extracted and saved text:', content.length + ' characters');
+              
+              toast({
+                title: "Document Processed",
+                description: `Successfully extracted ${extractResult.wordCount} words from ${fileData.file_name}`,
+              });
             } else {
-              throw new Error('No text content extracted');
+              throw new Error(extractResult?.error || 'No text content extracted');
             }
           } catch (error) {
             console.error('Error extracting document text:', error);
@@ -631,43 +636,72 @@ Please try uploading a different document or check if the file is accessible.`;
 
     const content = document.content || wordsRef.current.join(' ');
     const words = content.split(/\s+/);
-    const lines = content.split('\n').filter(line => line.trim());
     
-    const visibleLines = lines.slice(visibleLineStart, visibleLineStart + LINES_PER_VIEW);
+    // Split content into manageable lines (roughly 10-15 words per line for readability)
+    const wordsPerLine = 12;
+    const totalLines = Math.ceil(words.length / wordsPerLine);
+    
+    // Show 10 lines at a time
+    const startLineIndex = visibleLineStart;
+    const endLineIndex = Math.min(startLineIndex + LINES_PER_VIEW, totalLines);
+    
+    const visibleLines = [];
+    for (let lineIndex = startLineIndex; lineIndex < endLineIndex; lineIndex++) {
+      const startWord = lineIndex * wordsPerLine;
+      const endWord = Math.min(startWord + wordsPerLine, words.length);
+      const lineWords = words.slice(startWord, endWord);
+      visibleLines.push({ lineWords, startWord });
+    }
     
     return (
       <div className="space-y-4">
-        {visibleLines.map((line, lineIndex) => {
-          const lineWords = line.split(/\s+/);
-          const globalLineStart = visibleLineStart + lineIndex;
-          const wordsPerLine = Math.ceil(words.length / lines.length);
-          const lineWordStart = globalLineStart * wordsPerLine;
-          
-          return (
-            <p key={lineIndex} className="text-lg leading-relaxed">
-              {lineWords.map((word, wordIndex) => {
-                const globalWordIndex = lineWordStart + wordIndex;
-                const isCurrentWord = globalWordIndex === currentWordIndex;
-                const isPastWord = globalWordIndex < currentWordIndex;
-                
-                return (
-                  <span
-                    key={wordIndex}
-                    className={`transition-all duration-200 ${
-                      isCurrentWord
-                        ? 'bg-accent-mint text-accent-mint-foreground px-1 rounded shadow-sm'
-                        : isPastWord
-                        ? 'text-muted-foreground'
-                        : ''
-                    }`}
-                  >
-                    {word}{' '}
-                  </span>
-                );
-              })}
-            </p>
-          );
-        })}
+        {visibleLines.map(({ lineWords, startWord }, displayLineIndex) => (
+          <p key={displayLineIndex} className="text-lg leading-relaxed">
+            {lineWords.map((word, wordIndex) => {
+              const globalWordIndex = startWord + wordIndex;
+              const isCurrentWord = globalWordIndex === currentWordIndex;
+              const isPastWord = globalWordIndex < currentWordIndex;
+              
+              return (
+                <span
+                  key={wordIndex}
+                  className={`transition-all duration-200 ${
+                    isCurrentWord
+                      ? 'bg-accent-mint text-accent-mint-foreground px-1 rounded shadow-sm'
+                      : isPastWord
+                      ? 'text-muted-foreground'
+                      : ''
+                  }`}
+                >
+                  {word}{' '}
+                </span>
+              );
+            })}
+          </p>
+        ))}
+        
+        {/* Navigation buttons for pagination */}
+        <div className="flex justify-between items-center pt-4 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={visibleLineStart === 0}
+            onClick={() => setVisibleLineStart(Math.max(0, visibleLineStart - LINES_PER_VIEW))}
+          >
+            Previous 10 Lines
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Lines {startLineIndex + 1}-{endLineIndex} of {totalLines}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={endLineIndex >= totalLines}
+            onClick={() => setVisibleLineStart(Math.min(totalLines - LINES_PER_VIEW, visibleLineStart + LINES_PER_VIEW))}
+          >
+            Next 10 Lines
+          </Button>
+        </div>
       </div>
     );
   };
