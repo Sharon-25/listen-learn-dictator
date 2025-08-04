@@ -138,10 +138,28 @@ const ReadingPage = () => {
           // Extract text from the uploaded file
           try {
             console.log('Extracting text from file:', fileData.file_name);
+            
+            // Extract the file path from storage_url
+            const storagePath = fileData.storage_url.split('/storage/v1/object/public/user-files/')[1];
+            
+            if (!storagePath) {
+              throw new Error('Invalid storage URL format');
+            }
+
+            // Generate a signed URL for the file
+            const { data: signedUrlData, error: urlError } = await supabase.storage
+              .from('user-files')
+              .createSignedUrl(storagePath, 3600); // 1 hour expiry
+
+            if (urlError) {
+              console.error('Error creating signed URL:', urlError);
+              throw new Error('Could not access file');
+            }
+
             const { data: extractResult, error: extractError } = await supabase.functions
               .invoke('extract-document-text', {
                 body: {
-                  file_url: fileData.storage_url,
+                  file_url: signedUrlData.signedUrl,
                   file_type: fileData.file_type,
                   file_name: fileData.file_name
                 }
