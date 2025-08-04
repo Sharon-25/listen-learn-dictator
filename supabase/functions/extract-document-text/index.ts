@@ -6,6 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Map file types to Hugging Face model + correct MIME
+const MODEL_CONFIG: Record<string, { model: string; mime: string }> = {
+  pdf: {
+    model: "https://api-inference.huggingface.co/models/nielsr/pdf-text-extraction",
+    mime: "application/pdf",
+  },
+  docx: {
+    model: "https://api-inference.huggingface.co/models/chmp/parse-docx",
+    mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  },
+  pptx: {
+    model: "https://api-inference.huggingface.co/models/allenai/ppt-text-extraction",
+    mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -13,7 +29,6 @@ serve(async (req) => {
 
   try {
     const { file_url, file_type, file_name } = await req.json();
-
     if (!file_url) throw new Error("File URL is required");
 
     const HUGGING_FACE_TOKEN = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
@@ -21,32 +36,35 @@ serve(async (req) => {
 
     console.log(`Processing file: ${file_name} (${file_type})`);
 
-    // Download file from Supabase
+    // 1️⃣ Download file
     const fileResponse = await fetch(file_url, { cache: "no-store" });
     if (!fileResponse.ok) throw new Error(`Failed to download file: ${fileResponse.statusText}`);
 
     const fileBuffer = await fileResponse.arrayBuffer();
     let extractedText = "";
 
-    // Pick correct model based on file type
-    let modelURL = "";
-    if (file_type.includes("pdf")) {
-      modelURL = "https://api-inference.huggingface.co/models/nielsr/pdf-text-extraction";
-    } else if (file_type.includes("wordprocessingml.document")) {
-      modelURL = "https://api-inference.huggingface.co/models/chmp/parse-docx";
-    } else if (file_type.includes("presentationml.presentation")) {
-      modelURL = "https://api-inference.huggingface.co/models/allenai/ppt-text-extraction";
-    } else if (file_type.includes("text/plain")) {
-      extractedText = await fileResponse.text();
-    }
+    // 2️⃣ Determine model & MIME type
+    const fileExt = file_type.includes("pdf")
+      ? "pdf"
+      : file_type.includes("wordprocessingml.document")
+      ? "docx"
+      : file_type.includes("presentationml.presentation")
+      ? "pptx"
+      : "txt";
 
-    if (modelURL) {
-      console.log("Sending file to Hugging Face model:", modelURL);
-      const hfResponse = await fetch(modelURL, {
+    const modelConfig = MODEL_CONFIG[fileExt];
+
+    if (fileExt === "txt") {
+      // Directly read plain text
+      extractedText = await fileResponse.text();
+    } else if (modelConfig) {
+      // 3️⃣ Call Hugging Face
+      console.log("Sending to Hugging Face:", modelConfig.model);
+      const hfResponse = await fetch(modelConfig.model, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${HUGGING_FACE_TOKEN}`,
-          "Content-Type": "application/octet-stream",
+          Authorization: `Bearer ${HUGGING_FACE_TOKEN}`,
+          "Content-Type": modelConfig.mime,
         },
         body: fileBuffer,
       });
@@ -57,16 +75,15 @@ serve(async (req) => {
       }
 
       const result = await hfResponse.json();
-      extractedText = result.text || result.generated_text || "";
+      console.log("Full HF result sample:", JSON.stringify(result).substring(0, 400));
 
-      console.log("Raw extraction result:", extractedText.substring(0, 200));
+      extractedText = parseHuggingFaceResult(result);
     }
 
-    // Clean & format extracted text
+    // 4️⃣ Clean text or fallback
     extractedText = cleanExtractedText(extractedText);
-
     if (!extractedText) {
-      throw new Error("No text could be extracted from this document.");
+      extractedText = getFallbackText(file_name);
     }
 
     return new Response(
@@ -87,10 +104,50 @@ serve(async (req) => {
   }
 });
 
-// Utility function to clean text
+/** 🔹 Parse Hugging Face response in all formats */
+function parseHuggingFaceResult(result: any): string {
+  if (!result) return "";
+
+  // Case 1: Array (PDF or PPTX usually)
+  if (Array.isArray(result)) {
+    return result
+      .map((page: any) => page.text || page.paragraph || page.content || "")
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  // Case 2: Object (DOCX usually)
+  if (typeof result === "object") {
+    if (result.paragraphs) return result.paragraphs.join("\n\n");
+    if (result.text) return result.text;
+    if (result.generated_text) return result.generated_text;
+    if (result.content) return result.content;
+
+    // Case 3: Deep nested fallback
+    return JSON.stringify(result);
+  }
+
+  return "";
+}
+
+/** 🔹 Cleanup text */
 function cleanExtractedText(text: string): string {
   return text
     .replace(/\s+/g, " ")
     .replace(/\n\s*\n/g, "\n\n")
     .trim();
+}
+
+/** 🔹 Fallback message */
+function getFallbackText(fileName: string): string {
+  return `${fileName}
+
+⚠ Unable to extract text from this document.
+
+Possible reasons:
+- The file is scanned or image-based
+- Encrypted or password-protected
+- Unsupported format
+
+Try converting it to a searchable PDF or uploading a different file.`;
 }
