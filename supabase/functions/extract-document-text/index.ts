@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// ✅ Hugging Face models optimized for readable text
+// Hugging Face models for text extraction
 const MODEL_CONFIG: Record<string, string> = {
   pdf: "impira/layoutlm-document-qa",
   docx: "unstructuredio/unstructured-docx",
@@ -24,122 +24,185 @@ serve(async (req) => {
     if (!file_url) throw new Error("File URL is required");
 
     const HUGGING_FACE_TOKEN = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
-    if (!HUGGING_FACE_TOKEN)
+    if (!HUGGING_FACE_TOKEN) {
       throw new Error("Hugging Face API token not configured");
+    }
 
-    console.log(`Processing file: ${file_name} (${file_type})`);
+    console.log(`🔄 Processing file: ${file_name} (${file_type})`);
 
-    // 1️⃣ Fetch file from public Supabase URL
+    // 1️⃣ Fetch file from Supabase Storage (public or signed URL)
     const fileResponse = await fetch(file_url, { cache: "no-store" });
-    if (!fileResponse.ok)
+    if (!fileResponse.ok) {
       throw new Error(`Failed to download file: ${fileResponse.statusText}`);
+    }
 
-    const fileBuffer = await fileResponse.arrayBuffer();
-
-    // 2️⃣ Determine extension
-    const fileExt = file_type.includes("pdf")
-      ? "pdf"
-      : file_type.includes("wordprocessingml.document")
-      ? "docx"
-      : file_type.includes("presentationml.presentation")
-      ? "pptx"
-      : "txt";
+    // 2️⃣ Determine file type
+    const fileExt = getFileExtension(file_type);
+    console.log(`📄 Detected file type: ${fileExt}`);
 
     let extractedText = "";
 
     if (fileExt === "txt") {
-      // Directly read plain text
-      extractedText = await fileResponse.text();
+      // Handle TXT files directly
+      extractedText = new TextDecoder().decode(await fileResponse.arrayBuffer());
+      console.log(`✅ TXT file processed, ${extractedText.length} characters`);
     } else {
+      // Handle binary files (PDF, DOCX, PPTX) with Hugging Face
+      const fileBuffer = await fileResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(fileBuffer);
+      
       const modelURL = `https://api-inference.huggingface.co/models/${MODEL_CONFIG[fileExt]}`;
-      console.log("Sending to Hugging Face:", modelURL);
+      console.log(`🤖 Sending to Hugging Face: ${modelURL}`);
 
-      // 3️⃣ Send binary file to Hugging Face
       const hfResponse = await fetch(modelURL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${HUGGING_FACE_TOKEN}`,
+          "Authorization": `Bearer ${HUGGING_FACE_TOKEN}`,
+          "Content-Type": "application/octet-stream",
         },
-        body: fileBuffer, // binary buffer
+        body: uint8Array,
       });
 
       if (!hfResponse.ok) {
-        const errText = await hfResponse.text();
-        throw new Error(
-          `Hugging Face API error: ${hfResponse.status} - ${errText}`,
-        );
+        const errorText = await hfResponse.text();
+        console.error(`❌ Hugging Face API error: ${hfResponse.status} - ${errorText}`);
+        throw new Error(`Hugging Face API error: ${hfResponse.status}`);
       }
 
       const result = await hfResponse.json();
-      console.log("Sample HF result:", JSON.stringify(result).slice(0, 300));
+      console.log(`📊 HF response sample:`, JSON.stringify(result).slice(0, 200) + "...");
 
       extractedText = parseHuggingFaceResult(result);
     }
 
-    // 4️⃣ Clean extracted text or fallback
+    // 3️⃣ Clean and validate extracted text
     extractedText = cleanExtractedText(extractedText);
-    if (!extractedText) extractedText = getFallbackText(file_name);
+    
+    if (!extractedText || extractedText.trim().length < 10) {
+      console.log("⚠️ No readable text found, returning fallback message");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          extractedText: "⚠ Unable to extract text. The file may be scanned, encrypted, or image-based.",
+          wordCount: 0,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const wordCount = extractedText.split(/\s+/).filter(word => word.length > 0).length;
+    console.log(`✅ Extraction successful: ${wordCount} words, ${extractedText.length} characters`);
 
     return new Response(
       JSON.stringify({
         success: true,
         extractedText,
-        wordCount: extractedText.split(/\s+/).length,
+        wordCount,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
-    console.error("Document extraction error:", error);
+    console.error("❌ Document extraction error:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || "Extraction failed" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ 
+        success: false, 
+        extractedText: "⚠ Unable to extract text. The file may be scanned, encrypted, or image-based.",
+        error: error.message || "Extraction failed",
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
 
-/** 🔹 Parse Hugging Face response into readable text */
+/** 
+ * Determine file extension from MIME type 
+ */
+function getFileExtension(mimeType: string): string {
+  if (mimeType.includes("pdf")) return "pdf";
+  if (mimeType.includes("wordprocessingml.document")) return "docx";
+  if (mimeType.includes("presentationml.presentation")) return "pptx";
+  if (mimeType.includes("text/plain")) return "txt";
+  
+  // Fallback based on common MIME types
+  if (mimeType.includes("application/pdf")) return "pdf";
+  if (mimeType.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) return "docx";
+  if (mimeType.includes("application/vnd.openxmlformats-officedocument.presentationml.presentation")) return "pptx";
+  
+  return "txt"; // Default fallback
+}
+
+/** 
+ * Parse Hugging Face response into readable text 
+ */
 function parseHuggingFaceResult(result: any): string {
   if (!result) return "";
 
+  // Handle array responses (common for document extraction)
   if (Array.isArray(result)) {
-    // Array of objects with text/content fields
-    return result
-      .map((item) => item.text || item.content || item.paragraph || "")
-      .filter(Boolean)
-      .join("\n\n");
+    const textParts = result
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (typeof item === "object") {
+          return item.text || item.content || item.paragraph || item.generated_text || "";
+        }
+        return "";
+      })
+      .filter(text => text && text.trim().length > 0);
+    
+    return textParts.join("\n\n");
   }
 
+  // Handle object responses
   if (typeof result === "object") {
     if (result.text) return result.text;
     if (result.content) return result.content;
     if (result.generated_text) return result.generated_text;
-    if (Array.isArray(result.data)) return result.data.join("\n\n");
-    return JSON.stringify(result); // fallback to inspect structure
+    if (result.extracted_text) return result.extracted_text;
+    
+    // Handle nested data arrays
+    if (Array.isArray(result.data)) {
+      return result.data
+        .filter(item => item && typeof item === "string")
+        .join("\n\n");
+    }
+    
+    // Last resort: try to extract any text-like properties
+    const textValues = Object.values(result)
+      .filter(val => typeof val === "string" && val.trim().length > 0);
+    
+    if (textValues.length > 0) {
+      return textValues.join("\n\n");
+    }
   }
 
   return "";
 }
 
-/** 🔹 Cleanup text */
+/** 
+ * Clean extracted text and remove binary artifacts 
+ */
 function cleanExtractedText(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  
   return text
-    .replace(/[^ -~\n]+/g, "") // remove non-printable chars
-    .replace(/\s+/g, " ")
-    .replace(/\n\s*\n/g, "\n\n")
+    // Remove binary/control characters but keep basic punctuation and letters
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "")
+    // Remove multiple consecutive spaces
+    .replace(/[ \t]+/g, " ")
+    // Clean up line breaks (max 2 consecutive)
+    .replace(/\n{3,}/g, "\n\n")
+    // Remove trailing/leading whitespace from each line
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join("\n")
+    // Final trim
     .trim();
 }
 
-/** 🔹 Fallback message */
-function getFallbackText(fileName: string): string {
-  return `${fileName}
-
-⚠ Unable to extract text from this document.
-
-Possible reasons:
-- The file is scanned or image-based
-- Encrypted or password-protected
-- Unsupported format
-
-Try converting it to a searchable PDF or uploading a different file.`;
-}
+// TODO: Add OCR fallback for scanned documents using services like:
+// - Google Cloud Vision API
+// - AWS Textract  
+// - Azure Computer Vision
+// This would handle image-based PDFs and scanned documents
