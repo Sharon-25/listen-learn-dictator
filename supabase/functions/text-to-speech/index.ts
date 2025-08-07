@@ -91,19 +91,11 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in text-to-speech function:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      voice_id,
-      textLength: text?.length
-    });
     
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Failed to generate speech',
-        details: error.toString(),
-        voice_id,
-        textLength: text?.length
+        details: error.toString()
       }),
       {
         status: 500,
