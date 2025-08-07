@@ -7,13 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Hugging Face models for text extraction
-const HUGGING_FACE_MODELS = {
-  pdf: "impira/layoutlm-document-qa",
-  docx: "unstructuredio/unstructured-docx", 
-  pptx: "unstructuredio/unstructured-pptx",
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -26,94 +19,49 @@ serve(async (req) => {
       throw new Error("File URL is required");
     }
 
-    const HUGGING_FACE_TOKEN = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
-    if (!HUGGING_FACE_TOKEN) {
-      throw new Error("HUGGING_FACE_ACCESS_TOKEN not configured in environment");
-    }
-
-    console.log(`🔄 Processing: ${file_name} | Type: ${file_type} | URL: ${file_url.substring(0, 50)}...`);
+    console.log(`🔄 Processing: ${file_name} | Type: ${file_type}`);
 
     // Determine file type from MIME type
     const fileType = getFileType(file_type);
     console.log(`📁 Detected file type: ${fileType}`);
 
-    if (fileType === "txt") {
-      // Handle TXT files directly
-      const response = await fetch(file_url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`);
-      }
-      
-      const textContent = await response.text();
-      const cleanText = cleanExtractedText(textContent);
-      
-      console.log(`✅ TXT processed: ${cleanText.length} characters`);
-      
-      return new Response(JSON.stringify({
-        success: true,
-        extractedText: cleanText,
-        wordCount: countWords(cleanText)
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-
-    // Handle binary files (PDF, DOCX, PPTX) with Hugging Face
+    // Download file
     const fileResponse = await fetch(file_url);
     if (!fileResponse.ok) {
       throw new Error(`Failed to download file: ${fileResponse.statusText}`);
     }
 
-    // Get binary data
-    const fileBuffer = await fileResponse.arrayBuffer();
-    const fileData = new Uint8Array(fileBuffer);
-    
-    console.log(`📦 File size: ${fileData.length} bytes`);
+    let extractedText = "";
 
-    // Call Hugging Face API
-    const model = HUGGING_FACE_MODELS[fileType as keyof typeof HUGGING_FACE_MODELS];
-    const hfUrl = `https://api-inference.huggingface.co/models/${model}`;
-    
-    console.log(`🤖 Calling Hugging Face: ${hfUrl}`);
-
-    const hfResponse = await fetch(hfUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HUGGING_FACE_TOKEN}`,
-        "Content-Type": "application/octet-stream",
-      },
-      body: fileData,
-    });
-
-    if (!hfResponse.ok) {
-      const errorText = await hfResponse.text();
-      console.error(`❌ Hugging Face API Error: ${hfResponse.status} - ${errorText}`);
-      
-      return new Response(JSON.stringify({
-        success: false,
-        extractedText: "⚠ Could not extract readable text from this file.",
-        error: `Hugging Face API error: ${hfResponse.status}`
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+    if (fileType === "txt") {
+      // Handle TXT files directly
+      extractedText = await fileResponse.text();
+      console.log(`✅ TXT processed: ${extractedText.length} characters`);
+    } else if (fileType === "pdf") {
+      // Extract text from PDF using JavaScript
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      extractedText = await extractTextFromPDF(arrayBuffer);
+      console.log(`✅ PDF processed: ${extractedText.length} characters`);
+    } else if (fileType === "docx") {
+      // Extract text from DOCX using JavaScript
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      extractedText = await extractTextFromDOCX(arrayBuffer);
+      console.log(`✅ DOCX processed: ${extractedText.length} characters`);
+    } else if (fileType === "pptx") {
+      // Extract text from PPTX using JavaScript
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      extractedText = await extractTextFromPPTX(arrayBuffer);
+      console.log(`✅ PPTX processed: ${extractedText.length} characters`);
+    } else {
+      throw new Error(`Unsupported file type: ${fileType}`);
     }
 
-    // Parse Hugging Face response
-    const hfResult = await hfResponse.json();
-    const responsePreview = JSON.stringify(hfResult).substring(0, 200);
-    console.log(`📊 HF Response Preview: ${responsePreview}...`);
-
-    // Extract text from Hugging Face response
-    const extractedText = parseHuggingFaceResponse(hfResult);
-    
     if (!extractedText || extractedText.trim().length === 0) {
-      console.log("⚠️ No text extracted from Hugging Face response");
+      console.log("⚠️ No text extracted from file");
       
       return new Response(JSON.stringify({
         success: false,
-        extractedText: "⚠ Could not extract readable text from this file.",
-        rawResponse: responsePreview
+        extractedText: "⚠ Could not extract readable text from this file."
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -162,85 +110,100 @@ function getFileType(mimeType: string): string {
 }
 
 /**
- * Parse Hugging Face API response to extract text
+ * Extract text from PDF using simple binary parsing
  */
-function parseHuggingFaceResponse(response: any): string {
-  if (!response) {
-    console.log("🔍 Empty response from Hugging Face");
+async function extractTextFromPDF(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    // Simple PDF text extraction by finding text streams
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const pdfText = new TextDecoder().decode(uint8Array);
+    
+    // Extract text between BT and ET operators (basic PDF text extraction)
+    const textMatches = pdfText.match(/BT\s*(.+?)\s*ET/gs) || [];
+    const extractedTexts: string[] = [];
+    
+    for (const match of textMatches) {
+      // Extract text from Tj operators
+      const tjMatches = match.match(/\(([^)]+)\)\s*Tj/g) || [];
+      for (const tjMatch of tjMatches) {
+        const text = tjMatch.match(/\(([^)]+)\)/)?.[1];
+        if (text) {
+          extractedTexts.push(text);
+        }
+      }
+    }
+    
+    return extractedTexts.join(" ");
+  } catch (error) {
+    console.error("PDF extraction error:", error);
     return "";
   }
+}
 
-  let extractedTexts: string[] = [];
-
-  // Handle array responses
-  if (Array.isArray(response)) {
-    console.log(`🔍 Processing array response with ${response.length} items`);
+/**
+ * Extract text from DOCX using ZIP parsing
+ */
+async function extractTextFromDOCX(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    // Import JSZip dynamically
+    const JSZip = (await import("https://esm.sh/jszip@3.10.1")).default;
     
-    response.forEach((item, index) => {
-      if (typeof item === "string" && item.trim()) {
-        extractedTexts.push(item.trim());
-      } else if (typeof item === "object" && item) {
-        // Check common text fields
-        const textFields = ["text", "content", "paragraph", "generated_text", "extracted_text"];
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const documentXml = await zip.file("word/document.xml")?.async("text");
+    
+    if (!documentXml) {
+      throw new Error("Could not find document.xml in DOCX file");
+    }
+    
+    // Extract text from XML tags
+    const textContent = documentXml
+      .replace(/<[^>]*>/g, " ") // Remove XML tags
+      .replace(/\s+/g, " ") // Normalize whitespace
+      .trim();
+    
+    return textContent;
+  } catch (error) {
+    console.error("DOCX extraction error:", error);
+    return "";
+  }
+}
+
+/**
+ * Extract text from PPTX using ZIP parsing
+ */
+async function extractTextFromPPTX(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    // Import JSZip dynamically
+    const JSZip = (await import("https://esm.sh/jszip@3.10.1")).default;
+    
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const extractedTexts: string[] = [];
+    
+    // Find all slide XML files
+    const slideFiles = Object.keys(zip.files).filter(name => 
+      name.startsWith("ppt/slides/slide") && name.endsWith(".xml")
+    );
+    
+    for (const slideFile of slideFiles) {
+      const slideXml = await zip.file(slideFile)?.async("text");
+      if (slideXml) {
+        // Extract text from XML tags
+        const slideText = slideXml
+          .replace(/<[^>]*>/g, " ") // Remove XML tags
+          .replace(/\s+/g, " ") // Normalize whitespace
+          .trim();
         
-        for (const field of textFields) {
-          if (item[field] && typeof item[field] === "string" && item[field].trim()) {
-            extractedTexts.push(item[field].trim());
-            break;
-          }
+        if (slideText) {
+          extractedTexts.push(slideText);
         }
       }
-    });
-  }
-  
-  // Handle object responses
-  else if (typeof response === "object") {
-    console.log("🔍 Processing object response");
-    
-    // Direct text fields
-    const textFields = ["text", "content", "paragraph", "generated_text", "extracted_text"];
-    
-    for (const field of textFields) {
-      if (response[field] && typeof response[field] === "string" && response[field].trim()) {
-        extractedTexts.push(response[field].trim());
-      }
     }
     
-    // Check for nested arrays
-    if (response.data && Array.isArray(response.data)) {
-      response.data.forEach((item: any) => {
-        if (typeof item === "string" && item.trim()) {
-          extractedTexts.push(item.trim());
-        }
-      });
-    }
-    
-    // Check for results array
-    if (response.results && Array.isArray(response.results)) {
-      response.results.forEach((item: any) => {
-        if (typeof item === "string" && item.trim()) {
-          extractedTexts.push(item.trim());
-        } else if (item && typeof item === "object") {
-          for (const field of textFields) {
-            if (item[field] && typeof item[field] === "string" && item[field].trim()) {
-              extractedTexts.push(item[field].trim());
-            }
-          }
-        }
-      });
-    }
+    return extractedTexts.join("\n\n");
+  } catch (error) {
+    console.error("PPTX extraction error:", error);
+    return "";
   }
-  
-  // Handle string responses
-  else if (typeof response === "string" && response.trim()) {
-    console.log("🔍 Processing string response");
-    extractedTexts.push(response.trim());
-  }
-
-  const finalText = extractedTexts.join("\n\n");
-  console.log(`🔍 Extracted ${extractedTexts.length} text segments, total length: ${finalText.length}`);
-  
-  return finalText;
 }
 
 /**
