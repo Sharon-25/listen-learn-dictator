@@ -335,6 +335,7 @@ Please try uploading a different document or check if the file is accessible.`;
           body: {
             text: text,
             voice_id: getVoiceId(settings.voice_type),
+            model: "eleven_multilingual_v2",
             speed: settings.speed
           }
         });
